@@ -35,11 +35,11 @@ def topic_scrape(tags, vaccines, side_effects):
     #can the ratio of same tweets coming up for different search words used statistically?
                 print(' \n This is the search string: {0},{1},{2}'.format(tag,vaccine, effect))
                 c.Search ='{0},{1},{2}'.format(tag,vaccine,effect) # super set per vaccine: subset per 1 common side effect
-                c.Limit = 1000
+                c.Limit = 100
                 c.Store_csv = True
                 
-                #c.Since = '2021-06-02'
-                #c.Until = '2021-06-03'
+                c.Since = '2021-07-03'
+                c.Until = '2021-07-05'
                 c.Pandas = True
                 c.Lang = 'en'
                 c.Count = True
@@ -72,7 +72,7 @@ def topic_scrape(tags, vaccines, side_effects):
 #but need to have a separate index column
 
 full_df = topic_scrape(tag_list, vaccine_list, side_effect_list)
-
+#test_df = topic_scrape(tag_list, vaccine_list, side_effect_list)
 #full_df.to_csv('tweet_df.csv')
 
 # setting a regular index, 'index' column corresponds to search combinations
@@ -90,13 +90,14 @@ dense_df['id'] = dense_df['id'].astype('int64')
 dense_df['conversation_id'] = dense_df['conversation_id'].astype('int64')
 dense_df['date'] = dense_df['date'].astype('datetime64[ns]')
 
-#dropping tweets with the same tweet id/ using bitwise negation for speed as this might need to run online
-dense_dfND = dense_df[~dense_df.id.duplicated(keep = 'first')]
+
+# relabeling tweets to aggregate all vaccine type labels
+labeled_df = dense_df.groupby(['id','tweet'])['vaccine_type'].apply(', '.join).reset_index()
 #reindexing densedfND
-dense_dfND = dense_dfND.reset_index()
+
 
 # Tweet series
-tweetSeries = dense_dfND.tweet.copy()
+tweetSeries = labeled_df.tweet.copy()
 
 
 #preprocessing steps
@@ -131,9 +132,9 @@ def cleaner(tweet_text, clean_list):
 
 cleaner(tweetSeries,clean_tweets)
 
-dense_dfND['tweet'] = clean_tweets
+labeled_df['tweet'] = clean_tweets
 
-dense_dfND.to_csv('tweet_data_0705.csv')
+labeled_df.to_csv('tweet_data_0705.csv')
 
 
 
