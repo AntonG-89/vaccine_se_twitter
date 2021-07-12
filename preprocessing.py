@@ -47,11 +47,11 @@ def cs_dedup():
         sim_array = np.where(cos_array > 0.7)
         #plugging in the index array to labeled_df to re-index tweets
         #add try except for no matches
-        if len(sim_array[1]) > 0:
-            labeled_df.loc[sim_array[1],'cs_id'] = cs_index
-            cs_index +=1 
-        else:
-            continue
+        #if len(sim_array[1]) > 0:
+        labeled_df.loc[sim_array[1],'cs_id'] = cs_index
+        cs_index +=1 
+        #else:
+            #continue
         
         
 #dropping near duplicates
@@ -94,3 +94,25 @@ def cleaner(tweet_text, clean_list):
 cleaner(tweetSeries,clean_tweets)
 
 labeled_df['tweet'] = clean_tweets
+labeled_df = labeled_df.drop('index', axis = 1)
+
+# Working with labels
+
+all_labels = [vaccines for vaccines in labeled_df.vaccine_type]
+
+for idx,label in enumerate(all_labels):
+    cl_labels = [vaccine.strip(',') for vaccine in label]
+    all_labels[idx] = set(cl_labels)
+
+labeled_df['vaccine_type'] = all_labels
+
+# sort by label len/ delete all len 3 as they are generic. keep1, split 2 into duplicate tweets/diff labels
+
+#dropping all tweets w/ 3 labels 
+labeled_df = labeled_df[labeled_df.vaccine_type.map(len)<3]
+
+
+
+
+
+
