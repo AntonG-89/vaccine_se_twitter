@@ -60,20 +60,9 @@ azn_dict, azn_cv = fr_dict(df_azn)
 mod_pfi_dict, mf_cv = fr_dict(df_pfi_mod)
 
 
-# Plot horizontal bar graph
-#dict to df for ease of plotting
-# pfizer_dict.sort_values(by='count').plot.barh(x='words',
-#                       y='count',
-#                       ax=ax,
-#                       color="purple")
-
-# ax.set_title("Common Words Found in ")
 
 
-# plt.show()
-# import csv
-
-# dict_list = [mod_pfi_dict]
+# dict_list = [pfizer_dict,moderna_dict,azn_dict,mod_pfi_dict]
 # dict_names = ['mod_pfi_dict']
 # def dict_writer(dict_list,dict_name):
 #     for idx,t_dict in enumerate(dict_list):
