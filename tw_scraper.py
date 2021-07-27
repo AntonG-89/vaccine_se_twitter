@@ -36,17 +36,17 @@ def topic_scrape(prns,tags, vaccines, side_effects):
         
                        
                     print(' \n This is the search string: {0},{1},{2}'.format(tag,vaccine, effect))
-                    c.Search ='{0},{1},{2}'.format(tag,vaccine,effect) # super set per vaccine: subset per 1 common side effect
-                    c.Limit = 1000
+                    c.Search ='{0},{1},{2},{3}'.format(pn,tag,vaccine,effect) # super set per vaccine: subset per 1 common side effect
+                    c.Limit = 5000
                     c.Store_csv = True
                     
-                    c.Since = '2021-05-01'
-                    c.Until = '2021-07-01'
+                    c.Since = '2020-10-01'
+                    c.Until = '2021-07-26'
                     c.Pandas = True
                     c.Lang = 'en'
                     c.Count = True
     ##
-    #.Resume = 'covid_moderna_fever1_today.txt'
+                    c.Resume = 'Resume\{0},{1},{2},{3}.txt'.format(pn,tag,vaccine,effect)
                     
                     twint.run.Search(c)
                     effect_df = twint.storage.panda.Tweets_df
@@ -81,5 +81,7 @@ dense_df = full_df[['id', 'conversation_id','date','tweet','hashtags','nlikes','
 
 #this is a bit misleading since this date inst tied in with search params, which can be done, if needed
 today = str(date.today())
-dense_df.to_csv('dDf_{0}.csv'.format(today))
+dense_df.to_csv('dDf_102020_to_{0}.csv'.format(today))
+
+
 

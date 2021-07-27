@@ -9,12 +9,12 @@ import pandas as pd
 import numpy as np
 
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 from nltk.stem import WordNetLemmatizer, PorterStemmer
 
 
 #loading scraped df
-scrape_df = pd.read_csv(r'dDf_2021-07-10.csv')
+scrape_df = pd.read_csv(r'dDf_102020_to_2021-07-26.csv')
 
 
 # dtype conversion
@@ -23,7 +23,7 @@ scrape_df['conversation_id'] = scrape_df['conversation_id'].astype('int64')
 scrape_df['date'] = scrape_df['date'].astype('datetime64[ns]')
 
 # relabeling tweets to aggregate all vaccine type labels/groupby takes care of duplicate tweets by id
-labeled_df = scrape_df.groupby(['id','tweet'])['vaccine_type'].apply(', '.join).reset_index()
+labeled_df = scrape_df.groupby(['id','tweet','date'])['vaccine_type'].apply(', '.join).reset_index()
 
 # adjusting label column dtype and formating
 labeled_df.vaccine_type = [tweet.split() for tweet in labeled_df.vaccine_type]
@@ -46,13 +46,13 @@ def cs_dedup():
         #finding indexes of similar tweets to query tweet/ 0.7 measure is arbitrary
         sim_array = np.where(cos_array > 0.7)
         #plugging in the index array to labeled_df to re-index tweets
-        #add try except for no matches
-        #if len(sim_array[1]) > 0:
+
         labeled_df.loc[sim_array[1],'cs_id'] = cs_index
         cs_index +=1 
-        #else:
-            #continue
-        
+
+cs_dedup()
+#inspecting duplicates
+cs_dups = labeled_df[labeled_df.duplicated(subset='cs_id',keep = False)]
         
 #dropping near duplicates
 labeled_df = labeled_df.drop_duplicates(subset='cs_id').reset_index()
@@ -70,6 +70,8 @@ ps = PorterStemmer()
 #add rule to filter 'no{keyword}'
 
 clean_tweets = []
+
+#need to filter out actual labels words (pfizer, moderna, astrazeneca)
 def cleaner(tweet_text, clean_list):
     for i in range(0,len(tweet_text)):
         #filter out @handle pattern
@@ -79,15 +81,23 @@ def cleaner(tweet_text, clean_list):
         #replace '2nd'/'1st' token for more consistency
         shot_num = [word.replace('2nd','second').replace('1st','first') for word in no_at]
     
-        #strip , . ! ( ) {} [] '' "" if alnum/ isacii to filter non -latinic words
-        tokens = [token.strip('.,![]{}()\'\"#') for token in shot_num if token.isalnum() and token.isascii()]
-        
 
+        
+        
+        #tokens = [token.strip('.,![]{}()\'\"#') for token in shot_num if token.isalnum() and token.isascii()]
+        
+        tokens = [token.strip('.,![]{}()\'\"#/') for token in shot_num]
+        more_cl = [token.replace('(','').replace(':','') for token in tokens]
+        #isalnum removes important info because of brackets and stuff: Had a first shot (Moderna) 
+        isasc_low = [token.lower() for token in more_cl if token.isascii()]
+        isaln = [token for token in isasc_low if token.isalnum()]
+        no_label = [token for token in isaln if not token in ['pfizer','moderna','astrazeneca']]
+        
         #stemming/ TBD implement POS tagger to replace with lemmatizer
-        lstem_tweets = [ps.stem(token) for token in tokens]
+        #lstem_tweets = [ps.stem(token) for token in tokens]
         
         #converting back to string          
-        c_tweets = ' '.join(map(str,lstem_tweets))
+        c_tweets = ' '.join(map(str,no_label))
 
         clean_list.append(c_tweets)
 
@@ -102,7 +112,7 @@ all_labels = [vaccines for vaccines in labeled_df.vaccine_type]
 
 for idx,label in enumerate(all_labels):
     cl_labels = [vaccine.strip(',') for vaccine in label]
-    all_labels[idx] = set(cl_labels)
+    all_labels[idx] = sorted(set(cl_labels))
 
 labeled_df['vaccine_type'] = all_labels
 
@@ -111,8 +121,35 @@ labeled_df['vaccine_type'] = all_labels
 #dropping all tweets w/ 3 labels 
 labeled_df = labeled_df[labeled_df.vaccine_type.map(len)<3]
 
+#isolating and checking len2
+double_df = labeled_df[labeled_df.vaccine_type.map(len)==2]
+
+#double_df.to_csv('2tweet.csv')
+
+#splitting double categories into duplicate tweets with separate labels 
+# labeled_df.vaccine_type = [tuple(vaccine) for vaccine in labeled_df.vaccine_type]
+# labeled_df = labeled_df.explode(column='vaccine_type')
+
+## NEW LABELING SCHEMA: cast everything as str, let 2labels be actual labels
+#recasting as str
+labeled_df.vaccine_type = labeled_df.vaccine_type.astype('str')
+
+clean_labs = [label.strip("[]").replace("'",'') for label in labeled_df.vaccine_type]
+labeled_df.vaccine_type = clean_labs
+
+#dropping labels of low counts
+v_counts = labeled_df.vaccine_type.value_counts().reset_index()
+
+for i in range(0,len(v_counts)):
+    #identifying labels w/ low counts | 100 count is arbitrary, based on data
+    if v_counts.iloc[i,1] < 100:
+        #finding index of rows w/ low vaccine_types
+        drop_idx = labeled_df[labeled_df['vaccine_type'] == v_counts.iloc[i,0]].index
+        #dropping the rows by index
+        labeled_df = labeled_df.drop(drop_idx)
 
 
 
 
-
+#next best dataset
+labeled_df.to_csv('ready_to_go_1020_220726.csv')
